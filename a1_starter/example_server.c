@@ -15,43 +15,61 @@ uint64_t factorial(int x);
 int subInts(int a, int b);
 
 
-rpc_t rpcCurrent;
+rpc_t rpc;
+int sockfd;
+
 
 int main(void) {
+
   char msg[BUFSIZE];
 
-  const char *answer = "Standard Answer\n";
-  int running = 1;
+  const char *answer = "Standard\n";
+  static int running = 0;
+  pid_t pid; 
+  rpc =  (rpc_t){.name = "0.0.0.0", .port = 13000};
+  rpc_t *rpcPtr = RPC_Init(rpc.name, rpc.port);
 
-  rpcCurrent = (rpc_t){ .sockfd =0, .clientfd = 0}; 
-  rpc_t *rpcPtr = RPC_Init("0.0.0.0", 10000);
-
-
-  while (strcmp(msg, "quit\n")) {
-    memset(msg, 0, sizeof(msg));
-    ssize_t byte_count = recv_message(rpcPtr->clientfd, msg, BUFSIZE);
-    if (byte_count <= 0) {
-      break;
+  int clientfd;
+  while (1){
+      if (accept_connection(sockfd, &clientfd) < 0) {
+        fprintf(stderr, "oh no\n");
+        exit(1);
     }
-    printf("Client: %s\n", msg);
-    send_message(rpcPtr->clientfd, answer, strlen(answer));
+    pid = fork();
+    if(pid == 0){
+			printf("here1\n");
+      while (1) {
+        ssize_t byte_count = recv_message(clientfd, msg, BUFSIZE);
+
+        if(strcmp(msg, "quit\n")){
+          close(clientfd);
+          break;
+        }
+        else{
+          printf("Client: %s\n", msg);
+          send_message(clientfd, answer, strlen(answer));
+          memset(msg, 0, sizeof(msg));
+        }
+        
+      }
+      exit(0);
+    }
+    else {
+			printf("here2\n");
+      close(clientfd);
+			continue;
+    }
   }
 
+  close(sockfd);
   return 0;
 }
 
 rpc_t *RPC_Init(char *host, int port){
-    if (create_server(host, port, &(rpcCurrent.sockfd)) < 0) {
-        fprintf(stderr, "oh no\n");
-        return NULL;
+    if (create_server(host, port, &sockfd) < 0) {
+        fprintf(stderr, "RPC Init error\n");
     }
-
-    if (accept_connection(rpcCurrent.sockfd, &(rpcCurrent.clientfd)) < 0) {
-        fprintf(stderr, "oh no\n");
-        return NULL;
-    }
-    
-    return &rpcCurrent;
+    return &rpc;
 }
 
 
