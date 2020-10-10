@@ -8,4 +8,4 @@ typedef struct rpc_t{
     int port;
 } rpc_t;
 
-#endif
+#endif //RPC_H_

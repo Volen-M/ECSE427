@@ -5,24 +5,24 @@
 
 #include "a1_lib.h"
 #include "rpc.h"
+#include "frontend.h"
 
 #define BUFSIZE   1024
 
 int sockfd;
 rpc_t rpc; //RPC info stored in struct as demanded
 
-rpc_t *RPC_Connect(char *name, int port);
-
 
 int main(int argc, char *argv[]) {
-  rpc =  (rpc_t){.name = "0.0.0.0", .port = 18000};
+  rpc =  (rpc_t){.name = "0.0.0.0", .port = 16000};
   
   if (argc != 3){
     printf("There is the wrong amount of args: %i\n", argc);
     printf("Using standard host ip \"%s\" and port \"%i\"\n", rpc.name,rpc.port);
   }
   else{
-    rpc =  (rpc_t){.name = argv[1], .port = (int)strtol(argv[2], (char **)NULL, 10)};
+    rpc.port = (int)strtol(argv[2], (char **)NULL, 10);
+    sprintf(rpc.name, argv[1]);
   }
   char user_input[BUFSIZE] = { 0 };
   char server_msg[BUFSIZE] = { 0 };

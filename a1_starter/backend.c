@@ -8,46 +8,37 @@
 
 #include "a1_lib.h"
 #include "rpc.h"
+#include "backend.h"
 
 #define BUFSIZE   1024
 
-rpc_t *RPC_Init(char *host, int port);
-bool RPC_Call(char *msg, char* answer);
-void RPC_Close();
-
-int addInts(int a, int b);
-int multiplyInts(int a, int b);
-float divideFloats(float a, float b);
-uint64_t factorial(int x);
-int subInts(int a, int b);
 
 
 rpc_t rpc;
 int sockfd; //Not a fan of making it a global but given assignment specification 
             //demands of RPC_Connect/RPC_Close I had to
-pid_t pids[5];
 
 int main(int argc, char *argv[]) {
-  rpc =  (rpc_t){.name = "0.0.0.0", .port = 18000};
+  rpc =  (rpc_t){.name = "0.0.0.0", .port = 16000};
   
   if (argc != 3){
     printf("There is the wrong amount of args: %i\n", argc);
     printf("Using standard host ip \"%s\" and port \"%i\"\n", rpc.name,rpc.port);
   }
   else{
-    rpc =  (rpc_t){.name = argv[1], .port = (int)strtol(argv[2], (char **)NULL, 10)};
+    //printf("%s", argv[1]);
+    rpc.port = (int)strtol(argv[2], (char **)NULL, 10);
+    sprintf(rpc.name, argv[1]);
   }
-  printf("Server listening on %s:%i\n",rpc.name,rpc.port);
+  printf("Server listening on %s : %i\n",rpc.name,rpc.port);
 
   char msg[BUFSIZE];
-  char answer[BUFSIZE];
-
-  const char *rdyMsg = ">>"; 
+  char answer[BUFSIZE]; 
 
   pid_t pid; 
   rpc_t *rpcPtr = RPC_Init(rpc.name, rpc.port);
 
-  signal(SIGQUIT, RPC_Close);
+  signal(SIGQUIT, RPC_Close); //Signal used to see shutdown command
 
 
 
@@ -74,7 +65,7 @@ int main(int argc, char *argv[]) {
           sprintf(answer, "Bye! Front End Closed\n");
           send_message(clientfd, answer, strlen(answer));
           close(clientfd);
-          exit(0);
+          exit(1);
           break;
         }
         else if(strcmp(msg, "shutdown\n")==0 || strcmp(msg, "quit\n")==0 ){
@@ -85,27 +76,20 @@ int main(int argc, char *argv[]) {
           kill(pid, SIGQUIT);
           close(clientfd);
           close(sockfd);
-          return 0;
-          break;
+          exit(1);
         }
         else{
           printf("Client: %s\n", msg);
           RPC_Call(msg, answer);
           sprintf(answer, "%s\n>>", answer);
           send_message(clientfd, answer, strlen(answer));
-          //send_message(clientfd, rdyMsg, strlen(rdyMsg));
         }
         
       }
-      running--;
       exit(0);
     }
     else {
-      /*for(;;){
-        int rval;
-        int res = waitpid(-1, &rval, WNOHANG);
-        printf("Returned value %d\n", WEXITSTATUS(rval));
-      }*/
+      
       close(clientfd);
 			continue;
     }
@@ -114,6 +98,17 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+
+//Really useless return argument, but it was demanded
+rpc_t *RPC_Init(char *host, int port){
+    if (create_server(host, port, &sockfd) < 0) {
+        fprintf(stderr, "RPC Init error\n");
+    }
+    return &rpc;
+}
+
+
+//Immediate shutdown no need to wait for next request!
 void RPC_Close(){
   close(sockfd);
   printf("Reaches closure");
@@ -239,21 +234,8 @@ bool RPC_Call(char* msg, char* answer){
 }
 
 
-//Really useless return argument, but it was demanded
-rpc_t *RPC_Init(char *host, int port){
-    if (create_server(host, port, &sockfd) < 0) {
-        fprintf(stderr, "RPC Init error\n");
-    }
-    return &rpc;
-}
-
-
 int addInts(int x, int y) {
     return x + y;
-}
-
-int subInts(int a, int b){
-  return a-b;
 }
 
 int multiplyInts(int a, int b){
@@ -261,12 +243,7 @@ int multiplyInts(int a, int b){
 }
 
 float divideFloats(float a, float b){
-  if(b!= 0){
-    return a/b;
-  }
-
-  //given it's a float would never get here
-  return 0;
+  return a/b;
 }
 
 uint64_t factorial(int x){
