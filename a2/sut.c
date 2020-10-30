@@ -109,7 +109,8 @@ bool sut_create(sut_task_f fn){
 
     taskdesc *newtask;
     newtask = malloc(sizeof(taskdesc));
-
+    currTaskCexec = malloc(sizeof(taskdesc));
+    currTaskIexec = malloc(sizeof(taskdesc)); 
 
 	getcontext(&(newtask->taskcontext));
 	newtask->taskid = numtasks;
@@ -119,6 +120,7 @@ bool sut_create(sut_task_f fn){
 	newtask->taskcontext.uc_link = 0;
 	newtask->taskcontext.uc_stack.ss_flags = 0;
 	newtask->taskfunc = fn;
+    newtask->sockfd = -1;
 
     // printf("Here\n");
 	makecontext(&(newtask->taskcontext), fn, 0);
@@ -152,27 +154,30 @@ void sut_exit(){
 }
 
 void sut_open(char *dest, int port){
+    printf("Sut Open Enter\n");
     struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
     queue_insert_tail(&waitingqueue,tempEntry);
     swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-
+    printf("Sut Open Enter Through I-Exec\n");
     struct sockaddr_in server_address = { 0 };
 
     // create a new socket
-    *(currTaskCexec->sockfd) = socket(AF_INET, SOCK_STREAM, 0);
-    if (*(currTaskCexec->sockfd) < 0) {
+    int socketfd= socket(AF_INET, SOCK_STREAM, 0);
+    *(currTaskIexec->sockfd) = socketfd;
+    if (*(currTaskIexec->sockfd) < 0) {
         perror("Failed to create a new socket\n");
         return;
     }
-
+    printf("Here\n");
     // connect to server
     server_address.sin_family = AF_INET;
     inet_pton(AF_INET, dest, &(server_address.sin_addr.s_addr));
     server_address.sin_port = htons(port);
-    if (connect(*(currTaskCexec->sockfd), (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+    if (connect(*(currTaskIexec->sockfd), (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         perror("Failed to connect to server\n");
         return;
     }
+    printf("Sut Open Exiting\n");
     return;
 }
 
@@ -180,7 +185,7 @@ void sut_write(char *buf, int size){
     struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
     queue_insert_tail(&waitingqueue,tempEntry);
     swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-    send(*(currTaskCexec->sockfd), buf, size, 0);
+    send(*(currTaskIexec->sockfd), buf, size, 0);
     return ;
 }
 
@@ -188,7 +193,7 @@ void sut_close(){
     struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
     queue_insert_tail(&waitingqueue,tempEntry);
     swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-    close(*(currTaskCexec->sockfd));
+    close(*(currTaskIexec->sockfd));
     return;
 }
 
@@ -208,7 +213,7 @@ char *sut_read(){
     // }
     for(;;) {
         memset(msg, 0, sizeof(msg));
-        byte_count = recv((*currTaskCexec->sockfd), msg, BUFSIZE, 0);
+        byte_count = recv((*currTaskIexec->sockfd), msg, BUFSIZE, 0);
         if (byte_count>0){
             return msg;
         }
