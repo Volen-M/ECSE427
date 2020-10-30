@@ -48,6 +48,10 @@ struct queue_entry *queue_peek_front(struct queue *q) {
     return STAILQ_FIRST(q);
 }
 
+bool queue_isempty(struct queue *q){
+    return STAILQ_EMPTY(q);
+}
+
 struct queue_entry *queue_pop_head(struct queue *q) {
     struct queue_entry *elem = queue_peek_front(q);
     if(elem) {

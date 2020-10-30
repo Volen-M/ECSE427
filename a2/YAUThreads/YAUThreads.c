@@ -46,7 +46,7 @@ int YAUSpawn( void (threadfunc)() )
 
 void handle_timerexpiry() 
 {
-        struct sigaction handler;
+    struct sigaction handler;
 	int nxtthread, curthreadsave;
 	
         handler.sa_handler = handle_timerexpiry;

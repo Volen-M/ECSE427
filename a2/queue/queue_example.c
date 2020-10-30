@@ -27,12 +27,12 @@ int main() {
 
     struct queue_entry *ptr = queue_pop_head(&q);
     while(ptr) {
-	printf("popped %d\n", *(int*)ptr->data);
-	
-	queue_insert_tail(&q, ptr);
-	usleep(1000 * 1000);
-	
-	ptr = queue_pop_head(&q);
+        printf("popped %d\n", *(int*)ptr->data);
+        
+        queue_insert_tail(&q, ptr);
+        usleep(1000 * 1000);
+        
+        ptr = queue_pop_head(&q);
     }
     
     return 0;
