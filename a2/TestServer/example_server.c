@@ -3,7 +3,7 @@
 
 #include "a1_lib.h"
 
-#define BUFSIZE   1024
+#define BUFSIZE   8*1024
 
 int main(void) {
   int sockfd, clientfd;
@@ -11,7 +11,7 @@ int main(void) {
   const char *greeting = "hello, world\n";
   int running = 1;
 
-  if (create_server("0.0.0.0", 10000, &sockfd) < 0) {
+  if (create_server("0.0.0.0", 12000, &sockfd) < 0) {
     fprintf(stderr, "oh no\n");
     return -1;
   }
@@ -28,7 +28,7 @@ int main(void) {
       break;
     }
     printf("Client: %s\n", msg);
-    send_message(clientfd, greeting, strlen(greeting));
+    //send_message(clientfd, greeting, strlen(greeting));
   }
 
   return 0;

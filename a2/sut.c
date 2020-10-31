@@ -11,15 +11,17 @@
 
 typedef struct _taskdesc{
 	int taskid;
-    int *sockfd;
 	char *taskstack;
 	void *taskfunc;
 	ucontext_t taskcontext;
 }taskdesc;
 
 
+
 int numtasks;
 bool shutdownTriggered;
+pthread_mutex_t waitlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t readylock = PTHREAD_MUTEX_INITIALIZER;
 
 struct queue readyqueue;
 struct queue waitingqueue;
@@ -32,7 +34,75 @@ pthread_t thread_handle_cexec;
 
 ucontext_t contextcexec, contextiexec;
 
+int sockfd;
+void sut_open_iexec(char *dest, int port){
+    // printf("Sut Open Enter Through I-Exec\n");
+    struct sockaddr_in server_address = { 0 };
 
+    // create a new socket
+    int socketfd= socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socketfd;
+    if (sockfd < 0) {
+        perror("Failed to create a new socket\n");
+        return;
+    }
+    // connect to server
+    server_address.sin_family = AF_INET;
+    inet_pton(AF_INET, dest, &(server_address.sin_addr.s_addr));
+    server_address.sin_port = htons(port);
+    for(;;){
+        if (connect(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+            //perror("Failed to connect to server\n");
+            struct queue_entry *tempEntry = queue_new_node(currTaskIexec);
+            tempEntry = queue_new_node(currTaskIexec);
+            pthread_mutex_lock(&waitlock);
+            queue_insert_tail(&waitingqueue,tempEntry);
+            pthread_mutex_unlock(&waitlock);
+            swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
+        }
+        else{
+            printf("Connected to server\n");
+            break;
+        }
+    }
+    ucontext_t throwawayContext;
+    numtasks--;
+    //swapcontext(&throwawayContext,&contextiexec);
+    // printf("Sut Open Exiting\n");
+    swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
+}
+
+void sut_write_iexec(char *buf, int size){
+    // printf("Sut Write Enter Through I-Exec\n");
+     for(;;){
+        // printf("Sut_write\n");
+        if (send(sockfd, buf, size, MSG_DONTWAIT)==-1){
+            struct queue_entry *tempEntry = queue_new_node(currTaskIexec);
+            tempEntry = queue_new_node(currTaskIexec);
+            pthread_mutex_lock(&waitlock);
+            queue_insert_tail(&waitingqueue,tempEntry);
+            pthread_mutex_unlock(&waitlock);
+            swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
+        }
+        else{
+            break;
+        }
+    }
+    numtasks--;
+    // printf("Sut Write Exiting\n");
+    swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
+}
+
+void *sut_read_iexec(){
+
+}
+
+
+void sut_close_iexec(){
+    close(sockfd);
+    numtasks--;
+    swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
+}
 
 void *iexec(void *arg){
     // printf("Launched I-Exec Kernel thread\n");
@@ -42,11 +112,12 @@ void *iexec(void *arg){
         // printf("I-Exec running homie\n");
         queueIsEmpty = STAILQ_EMPTY(&waitingqueue);
         if (queueIsEmpty == false){
-            // pthread_mutex_lock(lock);
+            pthread_mutex_lock(&waitlock);
             struct queue_entry *tempEntry = queue_pop_head(&waitingqueue);
+            pthread_mutex_unlock(&waitlock);
             currTaskIexec = tempEntry->data;
             swapcontext(&contextiexec, &(currTaskIexec->taskcontext));
-            // pthread_mutex_unlock(lock);
+            // printf("back in iexec\n");
         }
         else if (shutdownTriggered == true && numtasks <= 0){
             break;
@@ -64,7 +135,9 @@ void *cexec(void *arg){
         queueIsEmpty = STAILQ_EMPTY(&readyqueue);
         if (queueIsEmpty == false){
             // pthread_mutex_lock(lock);
+            pthread_mutex_lock(&readylock);
             struct queue_entry *tempEntry = queue_pop_head(&readyqueue);
+            pthread_mutex_unlock(&readylock);
             currTaskCexec = tempEntry->data;
             swapcontext(&contextcexec, &(currTaskCexec->taskcontext));
             // pthread_mutex_unlock(lock);
@@ -84,7 +157,7 @@ void sut_init(){
 	numtasks = 0;
     shutdownTriggered = false;
 
-    // pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    // 
 
     readyqueue = queue_create();
     waitingqueue = queue_create();
@@ -109,8 +182,8 @@ bool sut_create(sut_task_f fn){
 
     taskdesc *newtask;
     newtask = malloc(sizeof(taskdesc));
-    currTaskCexec = malloc(sizeof(taskdesc));
-    currTaskIexec = malloc(sizeof(taskdesc)); 
+    currTaskCexec = (taskdesc*)malloc(sizeof(taskdesc));
+    currTaskIexec = (taskdesc*)malloc(sizeof(taskdesc)); 
 
 	getcontext(&(newtask->taskcontext));
 	newtask->taskid = numtasks;
@@ -120,7 +193,6 @@ bool sut_create(sut_task_f fn){
 	newtask->taskcontext.uc_link = 0;
 	newtask->taskcontext.uc_stack.ss_flags = 0;
 	newtask->taskfunc = fn;
-    newtask->sockfd = -1;
 
     // printf("Here\n");
 	makecontext(&(newtask->taskcontext), fn, 0);
@@ -128,7 +200,9 @@ bool sut_create(sut_task_f fn){
     
     // //Put newly created task at end of queue
     struct queue_entry *tempEntry = queue_new_node(newtask);
+    pthread_mutex_lock(&readylock);
     queue_insert_tail(&readyqueue,tempEntry);
+    pthread_mutex_unlock(&readylock);
     numtasks++;
     // printf("Here\n");
     return true;
@@ -138,7 +212,9 @@ void sut_yield(){
     //Put current task at end of queue
     //Go back Exec-C context
     struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
+    pthread_mutex_lock(&readylock);
     queue_insert_tail(&readyqueue,tempEntry);
+    pthread_mutex_unlock(&readylock);
     swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
     return;
 }
@@ -154,72 +230,105 @@ void sut_exit(){
 }
 
 void sut_open(char *dest, int port){
-    printf("Sut Open Enter\n");
-    struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
-    queue_insert_tail(&waitingqueue,tempEntry);
-    swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-    printf("Sut Open Enter Through I-Exec\n");
-    struct sockaddr_in server_address = { 0 };
+    //printf("Sut Open Enter\n");
+    numtasks++;
+    taskdesc *newtask;
+    newtask = malloc(sizeof(taskdesc));
+	getcontext(&(newtask->taskcontext));
+	newtask->taskid = numtasks;
+	newtask->taskstack = (char *)malloc(THREAD_STACK_SIZE);
+	newtask->taskcontext.uc_stack.ss_sp = newtask->taskstack;
+	newtask->taskcontext.uc_stack.ss_size = THREAD_STACK_SIZE;
+	newtask->taskcontext.uc_link = 0;
+	newtask->taskcontext.uc_stack.ss_flags = 0;
+	newtask->taskfunc = (void *)sut_open_iexec;
+	makecontext(&(newtask->taskcontext), (void *)sut_open_iexec, 2, dest, port);
 
-    // create a new socket
-    int socketfd= socket(AF_INET, SOCK_STREAM, 0);
-    *(currTaskIexec->sockfd) = socketfd;
-    if (*(currTaskIexec->sockfd) < 0) {
-        perror("Failed to create a new socket\n");
-        return;
-    }
-    printf("Here\n");
-    // connect to server
-    server_address.sin_family = AF_INET;
-    inet_pton(AF_INET, dest, &(server_address.sin_addr.s_addr));
-    server_address.sin_port = htons(port);
-    if (connect(*(currTaskIexec->sockfd), (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
-        perror("Failed to connect to server\n");
-        return;
-    }
-    printf("Sut Open Exiting\n");
+    struct queue_entry *tempEntry = queue_new_node(newtask);
+    pthread_mutex_lock(&waitlock);
+    queue_insert_tail(&waitingqueue,tempEntry);
+    pthread_mutex_unlock(&waitlock);
+    //swapcontext(&(newtask->taskcontext),&contextcexec);
     return;
 }
 
 void sut_write(char *buf, int size){
-    struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
+    numtasks++;
+    taskdesc *newtask;
+    newtask = malloc(sizeof(taskdesc));
+	getcontext(&(newtask->taskcontext));
+	newtask->taskid = numtasks;
+	newtask->taskstack = (char *)malloc(THREAD_STACK_SIZE);
+	newtask->taskcontext.uc_stack.ss_sp = newtask->taskstack;
+	newtask->taskcontext.uc_stack.ss_size = THREAD_STACK_SIZE;
+	newtask->taskcontext.uc_link = 0;
+	newtask->taskcontext.uc_stack.ss_flags = 0;
+	newtask->taskfunc = (void *)sut_write_iexec;
+	makecontext(&(newtask->taskcontext), (void *)sut_write_iexec, 2, buf, size);
+
+    struct queue_entry *tempEntry = queue_new_node(newtask);
+    pthread_mutex_lock(&waitlock);
     queue_insert_tail(&waitingqueue,tempEntry);
-    swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-    send(*(currTaskIexec->sockfd), buf, size, 0);
+    pthread_mutex_unlock(&waitlock);
     return ;
 }
 
 void sut_close(){
-    struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
+    numtasks++;
+    taskdesc *newtask;
+    newtask = malloc(sizeof(taskdesc));
+	getcontext(&(newtask->taskcontext));
+	newtask->taskid = numtasks;
+	newtask->taskstack = (char *)malloc(THREAD_STACK_SIZE);
+	newtask->taskcontext.uc_stack.ss_sp = newtask->taskstack;
+	newtask->taskcontext.uc_stack.ss_size = THREAD_STACK_SIZE;
+	newtask->taskcontext.uc_link = 0;
+	newtask->taskcontext.uc_stack.ss_flags = 0;
+	newtask->taskfunc = (void *)sut_close_iexec;
+	makecontext(&(newtask->taskcontext), (void *)sut_close_iexec, 0);
+
+    struct queue_entry *tempEntry = queue_new_node(newtask);
+    pthread_mutex_lock(&waitlock);
     queue_insert_tail(&waitingqueue,tempEntry);
-    swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
-    close(*(currTaskIexec->sockfd));
+    pthread_mutex_unlock(&waitlock);
+    close(sockfd);
     return;
 }
 
 char *sut_read(){
     //Socket data read in I-exec until socket wait then it goes to back of queue until ready
 
-    struct queue_entry *tempEntry = queue_new_node(currTaskCexec);
+    numtasks++;
+    taskdesc *newtask;
+    newtask = malloc(sizeof(taskdesc));
+	getcontext(&(newtask->taskcontext));
+	newtask->taskid = numtasks;
+	newtask->taskstack = (char *)malloc(THREAD_STACK_SIZE);
+	newtask->taskcontext.uc_stack.ss_sp = newtask->taskstack;
+	newtask->taskcontext.uc_stack.ss_size = THREAD_STACK_SIZE;
+	newtask->taskcontext.uc_link = 0;
+	newtask->taskcontext.uc_stack.ss_flags = 0;
+
+    struct queue_entry *tempEntry = queue_new_node(newtask);
+    pthread_mutex_lock(&waitlock);
     queue_insert_tail(&waitingqueue,tempEntry);
+    pthread_mutex_unlock(&waitlock);
     swapcontext(&(currTaskCexec->taskcontext),&contextcexec);
 
     ssize_t byte_count;
     char msg[BUFSIZE];
-    int clientfd;
-    // if (accept_connection(*(currTaskCexec->sockfd), &clientfd) < 0) {
-    //     fprintf(stderr, "oh no\n");
-    //     exit(1);
-    // }
+    
     for(;;) {
         memset(msg, 0, sizeof(msg));
-        byte_count = recv((*currTaskIexec->sockfd), msg, BUFSIZE, 0);
+        byte_count = recv(sockfd, msg, BUFSIZE, 0);
         if (byte_count>0){
             return msg;
         }
         else{
             tempEntry = queue_new_node(currTaskIexec);
+            pthread_mutex_lock(&waitlock);
             queue_insert_tail(&waitingqueue,tempEntry);
+            pthread_mutex_unlock(&waitlock);
             swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
         }
     }
