@@ -1,10 +1,12 @@
 #include "sut.h"
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 void hello1() {
     int i;
     char *str;
+    sut_open("0.0.0.0", 12000);
     for (i = 0; i < 10; i++) {
 	str = sut_read();
 	if (strlen(str) != 0)
@@ -21,6 +23,7 @@ void hello2() {
     for (i = 0; i < 100; i++) {
 	printf("Hello world!, this is SUT-Two \n");
 	sut_yield();
+    usleep(1000000);
     }
     sut_exit();
 }

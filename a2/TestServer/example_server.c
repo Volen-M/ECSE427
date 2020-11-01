@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "a1_lib.h"
 
@@ -28,7 +29,8 @@ int main(void) {
       break;
     }
     printf("Client: %s\n", msg);
-    //send_message(clientfd, greeting, strlen(greeting));
+    send_message(clientfd, greeting, strlen(greeting));
+    // usleep(1000000);
   }
 
   return 0;

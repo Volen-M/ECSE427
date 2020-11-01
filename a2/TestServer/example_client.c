@@ -12,7 +12,7 @@ int main(void) {
   char user_input[BUFSIZE] = { 0 };
   char server_msg[BUFSIZE] = { 0 };
 
-  if (connect_to_server("0.0.0.0", 10000, &sockfd) < 0) {
+  if (connect_to_server("0.0.0.0", 12000, &sockfd) < 0) {
     fprintf(stderr, "oh no\n");
     return -1;
   }
