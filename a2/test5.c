@@ -21,7 +21,7 @@ void hello1() {
 void hello2() {
     int i;
     for (i = 0; i < 100; i++) {
-	printf("Hello world!, this is SUT-Two \n");
+	//printf("Hello world!, this is SUT-Two \n");
 	sut_yield();
     usleep(1000000);
     }

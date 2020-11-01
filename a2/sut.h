@@ -20,7 +20,7 @@ void sut_init();
  *
  *  @params:
  *    fn:     A C function pointer.
- *  @return:    Boolean showing if task creation is successful (?)
+ *  @return:    Boolean showing if task creation is successful (only trigger if over MAX_THREADS limit)
  */
 bool sut_create(sut_task_f fn);
 
@@ -33,11 +33,12 @@ bool sut_create(sut_task_f fn);
 void sut_yield();
 
 /**
- *  Terminates task execution. Does not put back in task ready queue
+ *  Terminates task execution. Does not put task back in task ready queue
  *
  *  @return:    Void
  */
 void sut_exit();
+
 /**
  *  Reads data from an external process without stalling the executor. 
  *  It sends request to request queue and the task itself is put in a wait queue until response arrives. 
