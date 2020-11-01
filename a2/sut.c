@@ -11,11 +11,11 @@
 #include "queue.h"
 
 typedef struct _taskdesc{
-	int taskid;
-	char *taskstack;
+	int taskid;                                             //Unused is left for future expansion
+	char *taskstack;                                        
 	void *taskfunc;
 	ucontext_t taskcontext;
-    ucontext_t mastercontext;
+    ucontext_t mastercontext;                               //Used to come back to sut_open and sut_read from I-EXEC
 }taskdesc;
 
 
@@ -41,9 +41,9 @@ taskdesc *currTaskIexec;
 pthread_t thread_handle_iexec;
 pthread_t thread_handle_cexec;
 
-ucontext_t contextcexec, contextiexec;
+ucontext_t contextcexec, contextiexec;                      //Contexts to go back to C-Exec/I-Exec while loop
 
-
+// ------------------------- I-EXEC FUNCTIONS ---------------------------------------
 
 /**
  * This is the Helper Function For sut_open for I-Exec, it goes back to sut_open in C-EXEC
@@ -174,7 +174,9 @@ void sut_read_iexec(){
     return;
 }
 
-
+/**
+ * This is the Helper Function For sut_close for I-Exec, it does not go back C-EXEC
+ * */
 void sut_close_iexec(){
     close(sockfd);
     sockfd = -1;
@@ -182,6 +184,8 @@ void sut_close_iexec(){
     numtasks--;
     swapcontext(&(currTaskIexec->taskcontext),&contextiexec);
 }
+
+// ------------------------- KERNEL THREADS ---------------------------------------
 
 void *iexec(void *arg){
     bool queueIsEmpty = true;
@@ -219,6 +223,7 @@ void *cexec(void *arg){
     }
 }
 
+// ------------------------- HEADER FILE FUNCTIONS ---------------------------------------
 
 void sut_init(){
 	//Initialize variables
