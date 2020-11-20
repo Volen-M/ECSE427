@@ -27,6 +27,27 @@
 //	TODO: Change the Header size if required
 #define FREE_BLOCK_HEADER_SIZE 2 * sizeof(char *) + sizeof(int) // Size of the Header in a free memory block
 //	TODO: Add constants here
+#define ALLOCATED_BLOCK_HEADER_SIZE sizeof(int)
+typedef char ALIGN[FREE_BLOCK_HEADER_SIZE];
+typedef char ALIGN2[ALLOCATED_BLOCK_HEADER_SIZE];
+
+union header_free{
+	struct{
+		size_t size;							//Size dissincludes header
+		union header *prev;
+		union header *next;
+	}s; 
+	ALIGN x; 
+};
+typedef union header_free header_free_t;
+
+union header_allocated{
+	struct{
+		size_t size;
+	}s; 
+	ALIGN2 x; 
+};
+typedef union header_allocated header_allocated_t;
 
 typedef enum //	Policy type definition
 {
@@ -41,6 +62,7 @@ unsigned long totalAllocatedSize = 0; //	Total Allocated memory in Bytes
 unsigned long totalFreeSize = 0;	  //	Total Free memory in Bytes in the free memory list
 Policy currentPolicy = WORST;		  //	Current Policy
 //	TODO: Add any global variables here
+void *nextFitCurrentHeader = NULL;
 
 /*
  * =====================================================================================
@@ -128,6 +150,7 @@ void sma_mallopt(int policy)
 	// Assigns the appropriate Policy
 	if (policy == 1)
 	{
+		nextFitCurrentHeader = NULL;
 		currentPolicy = WORST;
 	}
 	else if (policy == 2)
@@ -242,8 +265,39 @@ void *allocate_worst_fit(int size)
 	int excessSize;
 	int blockFound = 0;
 
+	//User Code Start
+	//int biggestSize = 0;
+
+
+	//User Code END
+
 	//	TODO: 	Allocate memory by using Worst Fit Policy
 	//	Hint:	Start off with the freeListHead and iterate through the entire list to get the largest block
+	
+	//User Code Start
+	worstBlock = (header_free_t*)freeListHead;
+	header_free_t* studiedBlock = worstBlock;
+	int firstPass = 1; //To avoid if there is only one free spot which points at itself
+	if (worstBlock != NULL){
+		for(;;){
+			if(((header_free_t*)studiedBlock)->s.next != freeListHead && firstPass == 0){
+				firstPass = 0;
+				studiedBlock = ((header_free_t*)studiedBlock)->s.next; 
+				if(studiedBlock->s.size > ((header_free_t*)worstBlock)->s.size){
+					worstBlock = studiedBlock;
+				}
+			} 
+			else{
+				break;
+			}
+		}
+	}
+	if (((header_free_t*)worstBlock)->s.size > size){
+		blockFound = 1;
+		excessSize = ((header_free_t*)worstBlock)->s.size - size + FREE_BLOCK_HEADER_SIZE - ALLOCATED_BLOCK_HEADER_SIZE;
+	}
+
+	//User Code End
 
 	//	Checks if appropriate block is found.
 	if (blockFound)
@@ -257,6 +311,8 @@ void *allocate_worst_fit(int size)
 		worstBlock = (void *)-2;
 	}
 
+	//VOLEN COMMENT
+	//PUT A SEGMENT WHICH INCREASES STACK SIZE TO ALLOCATE MORE SHIT AND LOOP BACK TO THIS FUNCTION
 	return worstBlock;
 }
 
@@ -275,6 +331,32 @@ void *allocate_next_fit(int size)
 	//	TODO: 	Allocate memory by using Next Fit Policy
 	//	Hint:	Start off with the freeListHead, and keep track of the current position in the free memory list.
 	//			The next time you allocate, it should start from the current position.
+	
+	
+	//User Code Start
+	if(nextFitCurrentHeader == NULL){
+		nextFitCurrentHeader = freeListHead;
+	}
+	
+	nextBlock = (header_free_t*)nextFitCurrentHeader;
+	int firstPass = 1; //To avoid if there is only one free spot which points at itself
+	for(;;){
+		if(((header_free_t*)nextBlock)->s.next != freeListHead && firstPass == 0){
+			
+			firstPass = 0;
+			if(((header_free_t*)nextBlock)->s.size >= size){
+				nextFitCurrentHeader = ((header_free_t*)nextBlock)->s.next; 
+				break;
+			}
+			nextBlock = ((header_free_t*)nextBlock)->s.next; 
+		}
+	}
+
+	if (((header_free_t*)nextBlock)->s.size > size){
+		blockFound = 1;
+		excessSize = ((header_free_t*)nextBlock)->s.size - size + FREE_BLOCK_HEADER_SIZE - ALLOCATED_BLOCK_HEADER_SIZE;
+	}
+	//User Code End
 
 	//	Checks if appropriate found is found.
 	if (blockFound)
@@ -287,6 +369,8 @@ void *allocate_next_fit(int size)
 		//	Assigns invalid address if appropriate block not found in free list
 		nextBlock = (void *)-2;
 	}
+	//VOLEN COMMENT
+	//PUT A SEGMENT WHICH INCREASES STACK SIZE TO ALLOCATE MORE SHIT AND LOOP BACK TO THIS FUNCTION
 
 	return nextBlock;
 }
@@ -313,7 +397,9 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)
 	if (addFreeBlock)
 	{
 		//	TODO: Create a free block using the excess memory size, then assign it to the Excess Free Block
-
+		//User Code Starts
+		excessFreeBlock= (header_free_t*)(newBlock +((header_free_t*)newBlock)->s.size+FREE_BLOCK_HEADER_SIZE - ALLOCATED_BLOCK_HEADER_SIZE);
+		//User Code Ends
 		//	Checks if the new block was allocated from the free memory list
 		if (fromFreeList)
 		{
@@ -349,6 +435,13 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)
 void replace_block_freeList(void *oldBlock, void *newBlock)
 {
 	//	TODO: Replace the old block with the new block
+	//User Code Start
+	((header_free_t*)newBlock)->s.next =((header_free_t*)oldBlock)->s.next;
+	((header_free_t*)newBlock)->s.prev =((header_free_t*)oldBlock)->s.prev;
+	((header_free_t*)(((header_free_t*)newBlock)->s.prev))->s.next = newBlock;
+	
+	//User Code End
+
 
 	//	Updates SMA info
 	totalAllocatedSize += (get_blockSize(oldBlock) - get_blockSize(newBlock));
@@ -421,6 +514,29 @@ int get_largest_freeBlock()
 	int largestBlockSize = 0;
 
 	//	TODO: Iterate through the Free Block List to find the largest free block and return its size
+
+	//User Code Starts
+	header_free_t *worstBlock = (header_free_t*)freeListHead;
+	header_free_t* studiedBlock = worstBlock;
+	int firstPass = 1; //To avoid if there is only one free spot which points at itself
+	if (worstBlock != NULL){
+		for(;;){
+			if(((header_free_t*)studiedBlock)->s.next != freeListHead && firstPass == 0){
+				firstPass = 0;
+				studiedBlock = ((header_free_t*)studiedBlock)->s.next; 
+				if(studiedBlock->s.size > ((header_free_t*)worstBlock)->s.size){
+					worstBlock = studiedBlock;
+				}
+			} 
+			else{
+				break;
+			}
+		}
+	}
+	if(worstBlock!= NULL){
+		largestBlockSize = worstBlock->s.size;
+	}
+	//User Code Ends
 
 	return largestBlockSize;
 }
