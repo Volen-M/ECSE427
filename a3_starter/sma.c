@@ -439,7 +439,7 @@ void replace_block_freeList(void *oldBlock, void *newBlock)
 	((header_free_t*)newBlock)->s.next =((header_free_t*)oldBlock)->s.next;
 	((header_free_t*)newBlock)->s.prev =((header_free_t*)oldBlock)->s.prev;
 	((header_free_t*)(((header_free_t*)newBlock)->s.prev))->s.next = newBlock;
-	
+	((header_free_t*)newBlock)->s.size = ((header_free_t*)oldBlock)->s.size-(newBlock-(newBlock+FREE_BLOCK_HEADER_SIZE));
 	//User Code End
 
 
@@ -462,6 +462,8 @@ void add_block_freeList(void *block)
 	//			Also, you would need to check if merging with the "adjacent" blocks is possible or not.
 	//			Merging would be tideous. Check adjacent blocks, then also check if the merged
 	//			block is at the top and is bigger than the largest free block allowed (128kB).
+
+	//WAS WORKING ON THIS BEFORE BED
 
 	//	Updates SMA info
 	totalAllocatedSize -= get_blockSize(block);
