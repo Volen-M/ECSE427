@@ -86,17 +86,15 @@ void *sma_malloc(int size)
 		return NULL;
 	}
 	// Checks if the free list is empty
-	//puts("Entered sma_malloc");
 	if (freeListHead == NULL)
 	{
 		// Allocate memory by increasing the Program Break
 		pMemory = allocate_pBrk(size);
-		//puts("Malloc Here 1");
+		puts("back in malloc \n");
 	}
 	// If free list is not empty
 	else
 	{
-		//puts("Malloc Here 2");
 		// Allocate memory from the free memory list
 		pMemory = allocate_freeList(size);
 
@@ -117,7 +115,7 @@ void *sma_malloc(int size)
 	// pMemory+=ALLOCATED_BLOCK_HEADER_SIZE/4;
 	// Updates SMA Info
 	totalAllocatedSize += size;
-	//puts("pMemory addition ");
+	puts("pMemory addition \n");
 
 	return ((void*)(pMemory+ALLOCATED_BLOCK_HEADER_SIZE/4));
 }
@@ -143,7 +141,6 @@ void sma_free(void *ptr)
 	else
 	{
 		//	Adds the block to the free memory list
-		ptr -=ALLOCATED_BLOCK_HEADER_SIZE/4;
 		add_block_freeList(ptr);
 	}
 }
@@ -259,17 +256,18 @@ void *allocate_pBrk(int size)
 	//			Also, if you are getting a larger memory, you need to put the excess in the free list
 
 	//Start User Code
-	int total_size = sizeof(header_allocated_t) + size + excessSize;
+	int total_size = sizeof(header_free_t) + size + excessSize;
 	newBlock = sbrk(total_size);
+	int *currentBreak = sbrk(0);
 	if (newBlock == (void*) -1) {
 		return NULL;
 	}
-	//puts("Allocate_pBrk pass");
+	puts("Allocate_pBrk pass\n");
 	//End User Code
 
 	//	Allocates the Memory Block
 	allocate_block(newBlock, size, excessSize, 0);
-	//puts("Allocate_pBrk full pass");
+	puts("Allocate_pBrk full pass\n");
 
 	return newBlock;
 }
@@ -324,19 +322,22 @@ void *allocate_worst_fit(int size)	//Size passed dissincludes header
 	//	Hint:	Start off with the freeListHead and iterate through the entire list to get the largest block
 	
 	//User Code Start
-	puts("in Worst");
 	worstBlock = (header_free_t*)freeListHead;
 	header_free_t* studiedBlock = worstBlock;
-	int firstPass = 0; //To avoid if there is only one free spot which points at itself
+	int firstPass = 1; //To avoid if there is only one free spot which points at itself
 	if (worstBlock != NULL){
-		while(studiedBlock != freeListHead || firstPass == 0){
-			firstPass = 1;
-			studiedBlock = ((header_free_t*)studiedBlock)->s.next; 
-			if(studiedBlock->s.size > ((header_free_t*)worstBlock)->s.size){
-				worstBlock = studiedBlock;
+		for(;;){
+			if(studiedBlock != freeListTail && firstPass == 0){
+				firstPass = 0;
+				studiedBlock = ((header_free_t*)studiedBlock)->s.next; 
+				if(studiedBlock->s.size > ((header_free_t*)worstBlock)->s.size){
+					worstBlock = studiedBlock;
+				}
+			} 
+			else{
+				break;
 			}
 		}
-
 	}
 	if (((header_free_t*)worstBlock)->s.size+ FREE_BLOCK_HEADER_SIZE - ALLOCATED_BLOCK_HEADER_SIZE >= size){
 		blockFound = 1;
@@ -439,25 +440,6 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)	
 	//	TODO: Adjust the condition based on your Head and Tail size (depends on your TAG system)
 	//	Hint: Might want to have a minimum size greater than the Head/Tail sizes
 	addFreeBlock = excessSize > FREE_BLOCK_HEADER_SIZE;
-	//USER CODE BEGIN
-	if(newBlock == freeListHead && newBlock == freeListTail){
-		freeListHead = NULL;
-		freeListTail = NULL;
-	}else if (newBlock ==freeListHead){
-		freeListHead = ((header_free_t*)freeListHead)->s.next;
-		((header_free_t*)freeListHead)->s.prev = freeListTail;
-		((header_free_t*)freeListTail)->s.next = freeListHead;
-	}else if(newBlock == freeListTail){
-		freeListTail = ((header_free_t*)freeListTail)->s.prev;
-		((header_free_t*)freeListTail)->s.next = freeListHead;
-		((header_free_t*)freeListHead)->s.prev = freeListTail;
-	}
-	if (nextFitCurrentHeader == newBlock){
-		nextFitCurrentHeader = freeListHead;
-	}
-
-	//USER CODE END
-
 
 	//	If excess free size is big enough
 	if (addFreeBlock)
@@ -475,7 +457,7 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)	
 		}
 		else
 		{
-			//puts("Allocate_block in !fromFreeList pass");
+			puts("Allocate_block in !fromFreeList pass\n");
 			//	Adds excess free block to the free list
 			add_block_freeList(excessFreeBlock);
 		}
@@ -539,23 +521,16 @@ void add_block_freeList(void *block)
 	if (freeListTail != NULL){
 		((header_free_t*)freeListTail)->s.next = block;
 		((header_free_t*)block)->s.prev = freeListTail;
-		((header_free_t*)block)->s.next = freeListHead;
-		freeListTail = block;
 	}
-	else{
-		freeListTail = block;
-		((header_free_t*)block)->s.prev = block;
-		((header_free_t*)block)->s.next = block;
-		
-	}
-	//puts("add_block_freeList pass");
+	freeListTail = block;
+	puts("add_block_freeList pass\n");
 	//User Code End
 
 
 	//	Updates SMA info
 	totalAllocatedSize -= get_blockSize(block);
 	totalFreeSize += get_blockSize(block);
-	//puts("get_blockSize pass");
+	puts("get_blockSize pass\n");
 }
 
 /*
