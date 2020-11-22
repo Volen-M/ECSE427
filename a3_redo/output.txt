@@ -1,0 +1,86 @@
+volen@volenserver:~/ECSE427/a3_redo$ gcc a3_test.c sma.c -o testSma
+volen@volenserver:~/ECSE427/a3_redo$ ./testSma
+Test 1: Hole finding test...
+c[0]: 0x55c2c4ba7012
+c[1]: 0x55c2c4ba7118
+c[2]: 0x55c2c4baa42a
+c[3]: 0x55c2c4baa842
+c[4]: 0x55c2c4baac5a
+c[5]: 0x55c2c4bab072
+c[6]: 0x55c2c4bab48a
+c[7]: 0x55c2c4bab8a2
+c[8]: 0x55c2c4babcba
+c[9]: 0x55c2c4bac0d2
+c[10]: 0x55c2c4bac4ea
+c[11]: 0x55c2c4bac902
+c[12]: 0x55c2c4bacd1a
+c[13]: 0x55c2c4bad132
+c[14]: 0x55c2c4bad54a
+c[15]: 0x55c2c4bad962
+c[16]: 0x55c2c4badd7a
+c[17]: 0x55c2c4bae192
+c[18]: 0x55c2c4bae5aa
+c[19]: 0x55c2c4bae9c2
+c[20]: 0x55c2c4baedda
+c[21]: 0x55c2c4baf1f2
+c[22]: 0x55c2c4baf60a
+c[23]: 0x55c2c4bafa22
+c[24]: 0x55c2c4bafe3a
+c[25]: 0x55c2c4bb0252
+c[26]: 0x55c2c4bb066a
+c[27]: 0x55c2c4bb0a82
+c[28]: 0x55c2c4bb0e9a
+c[29]: 0x55c2c4bb12b2
+c[30]: 0x55c2c4bb16ca
+c[31]: 0x55c2c4bb1ae2
+Freeing c[10]: 0x55c2c4bac4ea
+Freeing c[11]: 0x55c2c4bac902
+Freeing c[12]: 0x55c2c4bacd1a
+Freeing c[13]: 0x55c2c4bad132
+Freeing c[14]: 0x55c2c4bad54a
+Freeing c[15]: 0x55c2c4bad962
+Freeing c[16]: 0x55c2c4badd7a
+Freeing c[17]: 0x55c2c4bae192
+CT : 0x55c2c4bac4ea
+                                 PASSED
+
+Test 2: Program break expansion test...
+                                 PASSED
+
+Test 3: Check for Worst Fit algorithm...
+Freeing c[31]: 0x55c2c648e58a
+Freeing c[30]: 0x55c2c648a572
+Freeing c[29]: 0x55c2c648655a
+Freeing c[28]: 0x55c2c6482542
+Freeing c[27]: 0x55c2c647e52a
+Freeing c[25]: 0x55c2c64764fa
+Freeing c[24]: 0x55c2c64724e2
+Freeing c[23]: 0x55c2c646e4ca
+Freeing c[20]: 0x55c2c6462482
+Freeing c[19]: 0x55c2c645e46a
+Freeing c[10]: 0x55c2c643a392
+Freeing c[9]: 0x55c2c643637a
+Freeing c[8]: 0x55c2c6432362
+Freeing c[5]: 0x55c2c642631a
+Freeing c[4]: 0x55c2c6422302
+                                 PASSED
+
+Test 4: Check for Next Fit algorithm...
+C[19]: 0x55c2c645e46a
+CP4: 0x55c2c645e46a
+                                 PASSED
+
+Test 5: Check for Reallocation with Next Fit...
+cp3: 0x55c2c6432362
+c[27]: 0x55c2c647e52a
+cp3: 0x55c2c64925a2
+cp4: 0x55c2c645e46a
+c[8]: 0x55c2c6432362
+cp4: 0x55c2c646e4ca
+                                 FAILED
+
+Test 6: Print SMA Statistics...
+===============================
+Total number of bytes allocated: 25810136
+Total free space: 569120
+Size of largest contigious free space (in bytes): 49216

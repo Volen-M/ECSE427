@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	void *ptr, *limitafter = NULL, *limitbefore = NULL;
 	char *c[32], *ct;
 	char str[60];
-
+	
 	// Test 1: Find the holes
 	puts("Test 1: Hole finding test...");
 
@@ -41,22 +41,23 @@ int main(int argc, char *argv[])
 	{
 		c[i] = (char *)sma_malloc(1024);
 		//puts("back in a3_test test 1");
-		sprintf(str, "c[%d]: %p",i, c[i]);
-		puts(str);
+		// sprintf(str, "c[%d]: %p",i, c[i]);
+		// puts(str);
 	}
 
 	// Now deallocating some of the slots ..to free
 	for (i = 10; i < 18; i++)
 	{
 		sma_free(c[i]);
-		sprintf(str, "Freeing c[%d]: %p",i, c[i]);
-		puts(str);
+		// sprintf(str, "Freeing c[%d]: %p",i, c[i]);
+		// puts(str);
+		//sma_mallinfo();
 	}
 
 	// Allocate some storage .. this should go into the freed storage
 	ct = (char *)sma_malloc(5 * 1024);
-	sprintf(str, "CT : %p", ct);
-	puts(str);
+	// sprintf(str, "CT : %p", ct);
+	// puts(str);
 
 	// Testing if you are finding the available holes
 	if (ct < c[31])
@@ -64,7 +65,6 @@ int main(int argc, char *argv[])
 	else
 		puts("\t\t\t\t FAILED\n");
 
-	return;
 	// Test 2: Program Break expansion Test
 	puts("Test 2: Program break expansion test...");
 
@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 	else
 		puts("\t\t\t\t FAILED\n");
 
+	
 	// Test 3: Worst Fit Test
 	puts("Test 3: Check for Worst Fit algorithm...");
 	// Sets Policy to Worst Fit
@@ -97,28 +98,58 @@ int main(int argc, char *argv[])
 	// Now deallocating some of the slots ..to free
 	// One chunk of 5x16 kbytes
 	sma_free(c[31]);
+		// sprintf(str, "Freeing c[%d]: %p",31, c[31]);
+		// puts(str);
 	sma_free(c[30]);
+		// sprintf(str, "Freeing c[%d]: %p",30, c[30]);
+		// puts(str);
 	sma_free(c[29]);
+		// sprintf(str, "Freeing c[%d]: %p",29, c[29]);
+		// puts(str);
 	sma_free(c[28]);
+		// sprintf(str, "Freeing c[%d]: %p",28, c[28]);
+		// puts(str);
 	sma_free(c[27]);
+		// sprintf(str, "Freeing c[%d]: %p",27, c[27]);
+		// puts(str);
 
 	// One chunk of 3x16 kbytes
 	sma_free(c[25]);
+		// sprintf(str, "Freeing c[%d]: %p",25, c[25]);
+		// puts(str);
 	sma_free(c[24]);
+		// sprintf(str, "Freeing c[%d]: %p",24, c[24]);
+		// puts(str);
 	sma_free(c[23]);
+		// sprintf(str, "Freeing c[%d]: %p",23, c[23]);
+		// puts(str);
 
 	// One chunk of 2x16 kbytes
 	sma_free(c[20]);
+		// sprintf(str, "Freeing c[%d]: %p",20, c[20]);
+		// puts(str);
 	sma_free(c[19]);
+		// sprintf(str, "Freeing c[%d]: %p",19, c[19]);
+		// puts(str);
 
 	// One chunk of 3x16 kbytes
 	sma_free(c[10]);
+		// sprintf(str, "Freeing c[%d]: %p",10, c[10]);
+		// puts(str);
 	sma_free(c[9]);
+		// sprintf(str, "Freeing c[%d]: %p",9, c[9]);
+		// puts(str);
 	sma_free(c[8]);
+		// sprintf(str, "Freeing c[%d]: %p",8, c[8]);
+		// puts(str);
 
 	// One chunk of 2x16 kbytes
 	sma_free(c[5]);
+		// sprintf(str, "Freeing c[%d]: %p",5, c[5]);
+		// puts(str);
 	sma_free(c[4]);
+		// sprintf(str, "Freeing c[%d]: %p",4, c[4]);
+		// puts(str);
 
 	char *cp2 = (char *)sma_malloc(16 * 1024 * 2);
 
@@ -138,6 +169,7 @@ int main(int argc, char *argv[])
 	//	Freeing cp2
 	sma_free(cp2);
 
+	
 	// Test 4: Next Fit Test
 	puts("Test 4: Check for Next Fit algorithm...");
 	// Sets Policy to Next Fit
@@ -151,27 +183,47 @@ int main(int argc, char *argv[])
 	{
 		if (cp4 == c[19])
 		{
-			// sprintf(str, "C[19]: %p", c[19]);
-			// puts(str);
-			// sprintf(str, "CP4: %p", cp4);
-			// puts(str);
+			sprintf(str, "C[19]: %p", c[19]);
+			puts(str);
+			sprintf(str, "CP4: %p", cp4);
+			puts(str);
 
 			puts("\t\t\t\t PASSED\n");
 		}
 		else
 		{
+			sprintf(str, "C[19]: %p", c[19]);
+			puts(str);
+			sprintf(str, "CP4: %p", cp4);
+			puts(str);
 			puts("\t\t\t\t FAILED\n");
 		}
 	}
 	else
 	{
+			sprintf(str, "c[8]: %p", c[8]);
+			puts(str);
+			sprintf(str, "cp3: %p", cp3);
+			puts(str);
 		puts("\t\t\t\t FAILED\n");
 	}
 
 	// Test 5: Realloc test (with Next Fit)
 	puts("Test 5: Check for Reallocation with Next Fit...");
+			// sprintf(str, "cp3: %p", cp3);
+			// puts(str);
 	cp3 = (char *)sma_realloc(cp3, 16 * 1024 * 5);
+			// sprintf(str, "c[27]: %p", c[27]);
+			// puts(str);
+			// sprintf(str, "cp3: %p", cp3);
+			// puts(str);
+			// sprintf(str, "cp4: %p", cp4);
+			// puts(str);
 	cp4 = (char *)sma_realloc(cp4, 16 * 1024 * 3);
+			// sprintf(str, "c[8]: %p", c[8]);
+			// puts(str);
+			// sprintf(str, "cp4: %p", cp4);
+			// puts(str);
 
 	if (cp3 == c[27] && cp3 != NULL && cp4 == c[8] && cp4 != NULL)
 	{
